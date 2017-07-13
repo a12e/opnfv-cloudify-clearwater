@@ -18,7 +18,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - http://www.getcloudify.org/spec/cloudify/4.0.1/types.yaml
   - http://www.getcloudify.org/spec/openstack-plugin/2.0.1/plugin.yaml
-  - http://www.getcloudify.org/spec/diamond-plugin/1.3/plugin.yaml
+  - http://www.getcloudify.org/spec/diamond-plugin/1.3.5/plugin.yaml
   - types/monitoring.yaml
   - types/clearwater.yaml
   - types/bind.yaml
@@ -57,12 +57,14 @@ inputs:
 
   key_pair_name:
     default: clearwater-key
-    description: Openstack key pair name of the key to associate with the new server
+    description: |
+      Existing Openstack key pair name of the key to install in each server
 
   private_key_path:
     description: |
-      Path to the private key which will be used for connecting to the server
-      on the manager or machine running CLI if running in local mode.
+      Path to the private key (on the manager, or machine running CLI if
+      running in local mode), that will be used for connecting to the
+      servers
 
   region:
     default: ''
@@ -98,6 +100,11 @@ inputs:
     description: number of homer instance
     default: 1
 
+  insecure_openstack:
+    type: boolean
+    description: Do not validate OpenStack servers certificate (risky!)
+    default: false
+
 dsl_definitions:
 
   openstack_config: &openstack_config
@@ -106,6 +113,15 @@ dsl_definitions:
     tenant_name: { get_secret: keystone_tenant_name }
     auth_url: { get_secret: keystone_url }
     region: { get_input: region }
+    custom_configuration:
+      nova_client:
+        insecure: { get_input: insecure_openstack }
+      neutron_client:
+        insecure: { get_input: insecure_openstack }
+      keystone_client:
+        insecure: { get_input: insecure_openstack }
+      cinder_client:
+        insecure: { get_input: insecure_openstack }
 
 node_types:
 
