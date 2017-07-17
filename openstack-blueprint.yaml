@@ -44,7 +44,7 @@ inputs:
 
   external_network_name:
     type: string
-    description: Network that will be the floating IP
+    description: Network from which floating adresses are provisonned
 
   public_domain:
     type: string
@@ -62,8 +62,8 @@ inputs:
 
   private_key_path:
     description: |
-      Path to the private key (on the manager, or machine running CLI if
-      running in local mode), that will be used for connecting to the
+      Path to the private key (on the manager, or machine running CLI if 
+      running in local mode), that will be used for connecting to the 
       servers
 
   region:
@@ -105,6 +105,21 @@ inputs:
     description: Do not validate OpenStack servers certificate (risky!)
     default: false
 
+  internet_http_proxy:
+    type: string
+    description: The proxy used by servers for HTTP Internet connections
+    default: ''
+
+  internet_https_proxy:
+    type: string
+    description: The proxy used by servers for HTTPS Internet connections
+    default: ''
+
+  internet_no_proxy:
+    type: string
+    description: Proxy exclusion list
+    default: ''
+
 dsl_definitions:
 
   openstack_config: &openstack_config
@@ -123,6 +138,19 @@ dsl_definitions:
       cinder_client:
         insecure: { get_input: insecure_openstack }
 
+  # Anchor for cloudify.datatypes.AgentConfig
+  agent_config: &agent_config
+    install_method: remote
+    user: { get_input: agent_user }
+    key: { get_property: [ keypair, private_key_path ] }
+    env:
+      http_proxy: { get_input: internet_http_proxy }
+      HTTP_PROXY: { get_input: internet_http_proxy }
+      https_proxy: { get_input: internet_https_proxy }
+      HTTPS_PROXY: { get_input: internet_https_proxy }
+      no_proxy: { get_input: internet_no_proxy }
+      NO_PROXY: { get_input: internet_no_proxy }
+
 node_types:
 
   # Global types for VMs
@@ -135,10 +163,8 @@ node_types:
     properties:
       openstack_config:
         default: *openstack_config
-      cloudify_agent:
-        default:
-          user: { get_input: agent_user }
-          key: { get_property: [ keypair, private_key_path ] }
+      agent_config:
+        default: *agent_config
       image:
         default: { get_input: image_id }
       flavor:
@@ -315,9 +341,7 @@ node_templates:
           min_instances: 1
           max_instances: 1
     properties:
-      cloudify_agent:
-          user: { get_input: agent_user }
-          key: { get_property: [ keypair, private_key_path ] }
+      agent_config: *agent_config
       image: { get_input: image_id }
       flavor: { get_input: flavor_id }
       management_network_name: { get_input: network_name }
