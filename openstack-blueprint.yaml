@@ -44,11 +44,13 @@ inputs:
 
   external_network_name:
     type: string
-    description: Network from which floating adresses are provisonned
+    description: Network from which floating IP adresses are provisonned
 
   public_domain:
     type: string
-    description: Sip domain for sip users and bono load-balancing
+    description: |
+      SIP domain assigned to SIP users and bono load-balancing. Warning: Do 
+      NOT use clearwater.local here, as it is already used internally.
 
   release:
     type: string
@@ -105,19 +107,11 @@ inputs:
     description: Do not validate OpenStack servers certificate (risky!)
     default: false
 
-  internet_http_proxy:
+  extra_userdata:
     type: string
-    description: The proxy used by servers for HTTP Internet connections
-    default: ''
-
-  internet_https_proxy:
-    type: string
-    description: The proxy used by servers for HTTPS Internet connections
-    default: ''
-
-  internet_no_proxy:
-    type: string
-    description: Proxy exclusion list
+    description: |
+      Contents of additional userdata to be run by cloud-init (e.g. for 
+      configuring proxy, DNS...)
     default: ''
 
 dsl_definitions:
@@ -143,13 +137,6 @@ dsl_definitions:
     install_method: remote
     user: { get_input: agent_user }
     key: { get_property: [ keypair, private_key_path ] }
-    env:
-      http_proxy: { get_input: internet_http_proxy }
-      HTTP_PROXY: { get_input: internet_http_proxy }
-      https_proxy: { get_input: internet_https_proxy }
-      HTTPS_PROXY: { get_input: internet_https_proxy }
-      no_proxy: { get_input: internet_no_proxy }
-      NO_PROXY: { get_input: internet_no_proxy }
 
 node_types:
 
@@ -172,6 +159,37 @@ node_types:
       management_network_name:
         default: { get_input: network_name }
     interfaces:
+      # This is almost a copy of cloudify.interfaces.lifecycle with userdata
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.nova_plugin.server.create
+          inputs:
+            args:
+              default:
+                userdata: { get_input: extra_userdata }
+            openstack_config:
+              default: {}
+        start:
+          implementation: openstack.nova_plugin.server.start
+          inputs:
+            start_retry_interval:
+              type: integer
+              default: 30
+            private_key_path:
+              type: string
+              default: ''
+            openstack_config:
+              default: {}
+        stop:
+          implementation: openstack.nova_plugin.server.stop
+          inputs:
+            openstack_config:
+              default: {}
+        delete:
+          implementation: openstack.nova_plugin.server.delete
+          inputs:
+            openstack_config:
+              default: {}
       cloudify.interfaces.monitoring_agent:
         install:
           implementation: diamond.diamond_agent.tasks.install
@@ -182,7 +200,6 @@ node_types:
         start: diamond.diamond_agent.tasks.start
         stop: diamond.diamond_agent.tasks.stop
         uninstall: diamond.diamond_agent.tasks.uninstall
-
       cloudify.interfaces.monitoring:
           start:
             implementation: diamond.diamond_agent.tasks.add_collectors
@@ -347,6 +364,15 @@ node_templates:
       management_network_name: { get_input: network_name }
       openstack_config: *openstack_config
     interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.nova_plugin.server.create
+          inputs:
+            args:
+              userdata: { get_input: extra_userdata }
+        start: openstack.nova_plugin.server.start
+        stop: openstack.nova_plugin.server.stop
+        delete: openstack.nova_plugin.server.delete
       cloudify.interfaces.monitoring_agent:
         install:
           implementation: diamond.diamond_agent.tasks.install
