@@ -114,6 +114,14 @@ inputs:
       configuring proxy, DNS...)
     default: ''
 
+  max_agent_workers:
+    type: integer
+    description: |
+      Maximum number of agent workers. By default, the value will be 5. It can 
+      be useful to reduce this number if your manager cannot keep up with too 
+      many agents.
+    default: 5
+
 dsl_definitions:
 
   openstack_config: &openstack_config
@@ -137,6 +145,7 @@ dsl_definitions:
     install_method: remote
     user: { get_input: agent_user }
     key: { get_property: [ keypair, private_key_path ] }
+    max_workers: { get_input: max_agent_workers }
 
 node_types:
 
