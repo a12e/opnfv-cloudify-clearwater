@@ -52,11 +52,6 @@ inputs:
       SIP domain assigned to SIP users and bono load-balancing. Warning: Do 
       NOT use clearwater.local here, as it is already used internally.
 
-  release:
-    type: string
-    default: stable
-    description: Clearwater release
-
   key_pair_name:
     default: clearwater-key
     description: |
@@ -123,6 +118,11 @@ inputs:
     default: 5
 
 dsl_definitions:
+
+  release_and_domain_config: &release_and_domain_config
+    # 'repoX' or 'stable'
+    release: 'repo125'
+    private_domain: 'clearwater.local'
 
   openstack_config: &openstack_config
     username: { get_secret: keystone_username }
@@ -398,9 +398,7 @@ node_templates:
   # Declare clearwater and other software
   sprout:
     type: clearwater.nodes.sprout
-    properties:
-      private_domain: clearwater.local
-      release: { get_input: release }
+    properties: *release_and_domain_config
     relationships:
       - type: cloudify.relationships.contained_in
         target: sprout_host
@@ -411,9 +409,7 @@ node_templates:
 
   bono:
     type: clearwater.nodes.bono
-    properties:
-      private_domain: clearwater.local
-      release: { get_input: release }
+    properties: *release_and_domain_config
     relationships:
       - type: cloudify.relationships.contained_in
         target: bono_host
@@ -424,9 +420,7 @@ node_templates:
 
   ellis:
     type: clearwater.nodes.ellis
-    properties:
-      private_domain: clearwater.local
-      release: { get_input: release }
+    properties: *release_and_domain_config
     relationships:
       - type: cloudify.relationships.contained_in
         target: ellis_host
@@ -435,9 +429,7 @@ node_templates:
 
   dime:
     type: clearwater.nodes.dime
-    properties:
-      private_domain: clearwater.local
-      release: { get_input: release }
+    properties: *release_and_domain_config
     relationships:
       - type: cloudify.relationships.contained_in
         target: dime_host
@@ -446,9 +438,7 @@ node_templates:
 
   vellum:
     type: clearwater.nodes.vellum
-    properties:
-      private_domain: clearwater.local
-      release: { get_input: release }
+    properties: *release_and_domain_config
     relationships:
       - type: cloudify.relationships.contained_in
         target: vellum_host
@@ -457,9 +447,7 @@ node_templates:
 
   homer:
     type: clearwater.nodes.homer
-    properties:
-      private_domain: clearwater.local
-      release: { get_input: release }
+    properties: *release_and_domain_config
     relationships:
       - type: cloudify.relationships.contained_in
         target: homer_host
@@ -469,8 +457,7 @@ node_templates:
   bind:
     type: clearwater.infra.bind
     properties:
-      private_domain: clearwater.local
-      release: { get_input: release }
+      <<: *release_and_domain_config
       public_domain: { get_input: public_domain }
       secret_code: secret
     relationships:
